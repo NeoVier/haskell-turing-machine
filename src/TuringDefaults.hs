@@ -1,22 +1,16 @@
-module TuringMachine
-  ( Id
-  , Tape(..)
+module TuringDefaults
+  ( Tape(..)
+  , Id
   , State(..)
   , Condition
   , Movement(..)
   , Transition(..)
   , Machine(..)
-  , transition
+  , move
+  , pickTransition
+  , currValue
+  , replaceValue
   ) where
-
--- Machine:
--- 	[State]
--- 		Id
--- 		[Transition]
--- 			Condition
--- 			State
--- 	[Tape]
-type Id = Int
 
 data Tape =
   Tape
@@ -25,13 +19,19 @@ data Tape =
     }
   deriving (Show)
 
+type Id = Int
+
 data State
   = State
       { id :: Id
       , transitions :: [Transition]
       }
   | Accept
+      { id :: Id
+      }
   | Reject
+      { id :: Id
+      }
   deriving (Show)
 
 type Condition = Int -> Bool
@@ -55,7 +55,7 @@ instance Show Transition where
     "Transition " ++ show newValue ++ " " ++ show move ++ " " ++ show endState
 
 data Machine =
-  Machine
+  SingleTape
     { currentState :: State
     , states :: [State]
     , machineTape :: Tape
@@ -66,16 +66,6 @@ move :: Tape -> Movement -> Tape
 move tape Stay = tape
 move (Tape inputTape tapeIndex) MoveLeft = Tape inputTape (tapeIndex - 1)
 move (Tape inputTape tapeIndex) MoveRight = Tape inputTape (tapeIndex + 1)
-
-transition :: Machine -> Machine
-transition (Machine Accept others inputTape) = Machine Accept others inputTape
-transition (Machine Reject others inputTape) = Machine Reject others inputTape
-transition (Machine currState others inputTape) =
-  Machine newState others newTape
-  where
-    (Transition _ writeValue moveTo newState) =
-      pickTransition (transitions currState) inputTape
-    newTape = move (replaceValue inputTape writeValue) moveTo
 
 pickTransition :: [Transition] -> Tape -> Transition
 pickTransition [] _ = error "TuringMachine.pickTransition: No valid transitions"
