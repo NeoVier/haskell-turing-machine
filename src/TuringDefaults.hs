@@ -34,7 +34,7 @@ data State
       }
   deriving (Show)
 
-type Condition = Int -> Bool
+type Condition = Int
 
 data Movement
   = Stay
@@ -42,36 +42,63 @@ data Movement
   | MoveLeft
   deriving (Show)
 
-data Transition =
-  Transition
-    { condition :: Condition
-    , newValue :: Int
-    , movement :: Movement
-    , endState :: State
-    }
+data Transition
+  = Single
+      { condition :: Condition
+      , newValue :: Int
+      , movement :: Movement
+      , endState :: State
+      }
+  | Multi
+      { conditions :: [Condition]
+      , newValues :: [Int]
+      , movements :: [Movement]
+      , endState :: State
+      }
+  deriving (Show)
 
-instance Show Transition where
-  show (Transition condition newValue move endState) =
-    "Transition " ++ show newValue ++ " " ++ show move ++ " " ++ show endState
-
-data Machine =
-  SingleTape
-    { currentState :: State
-    , states :: [State]
-    , machineTape :: Tape
-    }
+data Machine
+  = SingleTape
+      { currentState :: State
+      , states :: [State]
+      , machineTape :: Tape
+      }
+  | MultiTape
+      { currentState :: State
+      , states :: [State]
+      , machineTapes :: [Tape]
+      }
   deriving (Show)
 
 move :: Tape -> Movement -> Tape
 move tape Stay = tape
-move (Tape inputTape tapeIndex) MoveLeft = Tape inputTape (tapeIndex - 1)
+move (Tape inputTape tapeIndex) MoveLeft
+  | tapeIndex == 0 = error "TuringDefaults.move: Negative index."
+  | otherwise = Tape inputTape (tapeIndex - 1)
 move (Tape inputTape tapeIndex) MoveRight = Tape inputTape (tapeIndex + 1)
 
-pickTransition :: [Transition] -> Tape -> Transition
-pickTransition [] _ = error "TuringMachine.pickTransition: No valid transitions"
-pickTransition (x:xs) inputTape
-  | condition x (currValue inputTape) = x
-  | otherwise = pickTransition xs inputTape
+pickTransition :: Machine -> Transition
+pickTransition (SingleTape currState others inputTape)
+  | null possibleTransitions =
+    error "TuringDefaults.pickTransition: No valid transition."
+  | otherwise = pickFromPossibles possibleTransitions
+  where
+    possibleTransitions = transitions currState
+    pickFromPossibles (x:xs)
+      | condition x == currValue inputTape = x
+      | otherwise = pickFromPossibles xs
+pickTransition (MultiTape currState others inputTapes)
+  | null possibleTransitions =
+    error "TuringDefaults.pickTransition: No valid transition."
+  | otherwise = pickFromPossibles
+  where
+    possibleTransitions = transitions currState
+    bytes = map currValue inputTapes
+    validTransitions =
+      dropWhile
+        (elem False . zipWith (==) bytes . conditions)
+        possibleTransitions
+    pickFromPossibles = head validTransitions
 
 currValue :: Tape -> Int
 currValue (Tape inputTape tapeIndex) = inputTape !! tapeIndex
