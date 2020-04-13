@@ -2,7 +2,9 @@ module Main
   ( main
   ) where
 
-import TuringMachine
+import Testing
+import TuringDefaults
+import TuringMachines
 
 main :: IO ()
 main = undefined

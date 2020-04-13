@@ -10,6 +10,7 @@ module TuringDefaults
   , pickTransition
   , currValue
   , replaceValue
+  , isFinal
   ) where
 
 data Tape =
@@ -90,7 +91,7 @@ pickTransition (SingleTape currState others inputTape)
 pickTransition (MultiTape currState others inputTapes)
   | null possibleTransitions =
     error "TuringDefaults.pickTransition: No valid transition."
-  | otherwise = pickFromPossibles
+  | otherwise = head validTransitions
   where
     possibleTransitions = transitions currState
     bytes = map currValue inputTapes
@@ -98,7 +99,6 @@ pickTransition (MultiTape currState others inputTapes)
       dropWhile
         (elem False . zipWith (==) bytes . conditions)
         possibleTransitions
-    pickFromPossibles = head validTransitions
 
 currValue :: Tape -> Int
 currValue (Tape inputTape tapeIndex) = inputTape !! tapeIndex
@@ -110,3 +110,8 @@ replaceValue (Tape inputTape tapeIndex) newValue =
 replaceNth :: Int -> [a] -> a -> [a]
 replaceNth 0 (x:xs) newValue = newValue : xs
 replaceNth n (x:xs) newValue = x : replaceNth (n - 1) xs newValue
+
+isFinal :: State -> Bool
+isFinal (Accept _) = True
+isFinal (Reject _) = True
+isFinal _ = False
